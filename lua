@@ -833,6 +833,7 @@ function Library:CreateWindow(config)
     self.Tabs = {}
     self.MenuOpen = false
     self.PageOpen = false
+    self._Connections = {}
 
     self.ScreenGui = new("ScreenGui", {
         Name = "Reiihub - UI",
@@ -994,22 +995,23 @@ function Library:CreateWindow(config)
     self.PingLabel = makeText("Ping: --", 7, FONT, Color3.fromRGB(204, 183, 148))
 
     local fpsFrameCount, fpsAccum = 0, 0
-    RunService.RenderStepped:Connect(function(dt)
+    table.insert(self._Connections, RunService.RenderStepped:Connect(function(dt)
         fpsFrameCount += 1
         fpsAccum += dt
         if fpsAccum >= 1 then
             self.FpsLabel.Text = "FPS: " .. math.floor(fpsFrameCount / fpsAccum + 0.5)
             fpsFrameCount, fpsAccum = 0, 0
         end
-    end)
+    end))
 
-    task.spawn(function()
+    table.insert(self._Connections, task.spawn(function()
         local pingItem = Stats.Network.ServerStatsItem["Data Ping"]
-        while task.wait(1) do
+        while self.ScreenGui and self.ScreenGui.Parent do
+            task.wait(1)
             local ok, value = pcall(function() return pingItem:GetValue() end)
             self.PingLabel.Text = ok and string.format("Ping: %d ms", math.floor(value + 0.5)) or "Ping: --"
         end
-    end)
+    end))
 
     self.Page = new("Frame", {
         Name = "Page",
@@ -1313,6 +1315,21 @@ function Library:Notify(config)
         t.Completed:Connect(function() notif:Destroy() end)
         t:Play()
     end)
+end
+
+function Library:Destroy()
+    if self._Connections then
+        for _, c in ipairs(self._Connections) do
+            if typeof(c) == "RBXScriptConnection" then
+                pcall(function() c:Disconnect() end)
+            end
+        end
+        self._Connections = {}
+    end
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
+        self.ScreenGui = nil
+    end
 end
 
 task.spawn(function()
