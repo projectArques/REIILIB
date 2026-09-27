@@ -23,10 +23,10 @@ local EXPAND_TIME   = 0.3
 local BOUNCE_STYLE  = Enum.EasingStyle.Back
 local BOUNCE_DIR    = Enum.EasingDirection.Out
 
-local BAR_RESTING_Y = -16
-local BAR_HIDDEN_Y  = 90
-local CHEV_OPEN_Y   = -100
-local CHEV_CLOSED_Y = -14
+local BAR_RESTING_Y = 16
+local BAR_HIDDEN_Y  = -90
+local CHEV_OPEN_Y   = 100
+local CHEV_CLOSED_Y = 14
 
 local PAGE_OPEN_HEIGHT = 320
 
@@ -833,7 +833,6 @@ function Library:CreateWindow(config)
     self.Tabs = {}
     self.MenuOpen = false
     self.PageOpen = false
-    self._Connections = {}
 
     self.ScreenGui = new("ScreenGui", {
         Name = "Reiihub - UI",
@@ -849,9 +848,9 @@ function Library:CreateWindow(config)
         ZIndex = 150,
         BorderSizePixel = 0,
         BackgroundColor3 = Color3.fromRGB(17, 17, 17),
-        AnchorPoint = Vector2.new(0.5, 1),
+        AnchorPoint = Vector2.new(0.5, 0),
         Size = UDim2.new(0, 319, 0, 70),
-        Position = UDim2.new(0.5, 0, 1, BAR_HIDDEN_Y),
+        Position = UDim2.new(0.5, 0, 0, BAR_HIDDEN_Y),
         Name = "SmartBar",
         BackgroundTransparency = 1,
         Parent = self.ScreenGui,
@@ -909,7 +908,7 @@ function Library:CreateWindow(config)
         ZIndex = 200,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(0.5, 0, 1, CHEV_CLOSED_Y),
+        Position = UDim2.new(0.5, 0, 0, CHEV_CLOSED_Y),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         AutoButtonColor = false,
@@ -917,7 +916,7 @@ function Library:CreateWindow(config)
         ImageRectOffset = Vector2.new(564, 284),
         ImageRectSize = Vector2.new(36, 36),
         ImageColor3 = Color3.fromRGB(230, 190, 80),
-        Rotation = 180,
+        Rotation = 0,
         Parent = self.ScreenGui,
     })
 
@@ -926,9 +925,9 @@ function Library:CreateWindow(config)
         ZIndex = 9000,
         BorderSizePixel = 0,
         BackgroundColor3 = Color3.fromRGB(21, 21, 23),
-        AnchorPoint = Vector2.new(0, 1),
+        AnchorPoint = Vector2.new(0, 0),
         Size = UDim2.new(0, 340, 0, 34),
-        Position = UDim2.new(0, 20, 1, -20),
+        Position = UDim2.new(0, 20, 0, 20),
         Name = "Watermark",
         Parent = self.ScreenGui,
     })
@@ -995,30 +994,29 @@ function Library:CreateWindow(config)
     self.PingLabel = makeText("Ping: --", 7, FONT, Color3.fromRGB(204, 183, 148))
 
     local fpsFrameCount, fpsAccum = 0, 0
-    table.insert(self._Connections, RunService.RenderStepped:Connect(function(dt)
+    RunService.RenderStepped:Connect(function(dt)
         fpsFrameCount += 1
         fpsAccum += dt
         if fpsAccum >= 1 then
             self.FpsLabel.Text = "FPS: " .. math.floor(fpsFrameCount / fpsAccum + 0.5)
             fpsFrameCount, fpsAccum = 0, 0
         end
-    end))
+    end)
 
-    table.insert(self._Connections, task.spawn(function()
+    task.spawn(function()
         local pingItem = Stats.Network.ServerStatsItem["Data Ping"]
-        while self.ScreenGui and self.ScreenGui.Parent do
-            task.wait(1)
+        while task.wait(1) do
             local ok, value = pcall(function() return pingItem:GetValue() end)
             self.PingLabel.Text = ok and string.format("Ping: %d ms", math.floor(value + 0.5)) or "Ping: --"
         end
-    end))
+    end)
 
     self.Page = new("Frame", {
         Name = "Page",
         ZIndex = 145,
-        AnchorPoint = Vector2.new(0.5, 1),
+        AnchorPoint = Vector2.new(0.5, 0),
         Size = UDim2.new(0, 290, 0, 0),
-        Position = UDim2.new(0.5, 0, 0, -6),
+        Position = UDim2.new(0.5, 0, 1, 6),
         BackgroundColor3 = Color3.fromRGB(21, 21, 23),
         BorderSizePixel = 0,
         ClipsDescendants = true,
@@ -1092,13 +1090,13 @@ function Library:SetMenuOpen(open)
 
     TweenService:Create(self.SmartBar,
         TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Position = UDim2.new(0.5, 0, 1, open and BAR_RESTING_Y or BAR_HIDDEN_Y) }):Play()
+        { Position = UDim2.new(0.5, 0, 0, open and BAR_RESTING_Y or BAR_HIDDEN_Y) }):Play()
     TweenService:Create(self.Chevron,
         TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Position = UDim2.new(0.5, 0, 1, open and CHEV_OPEN_Y or CHEV_CLOSED_Y) }):Play()
+        { Position = UDim2.new(0.5, 0, 0, open and CHEV_OPEN_Y or CHEV_CLOSED_Y) }):Play()
     TweenService:Create(self.Chevron,
         TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Rotation = open and 0 or 180 }):Play()
+        { Rotation = open and 180 or 0 }):Play()
 end
 
 function Library:CreateTab(name, imageId)
@@ -1178,9 +1176,9 @@ function Library:CreateTab(name, imageId)
     local Dot = new("Frame", {
         Name = "SelectedDot",
         ZIndex = 156,
-        AnchorPoint = Vector2.new(0.5, 1),
+        AnchorPoint = Vector2.new(0.5, 0),
         Size = UDim2.new(0, 4, 0, 4),
-        Position = UDim2.new(0.5, 0, 1, 0),
+        Position = UDim2.new(0.5, 0, 0, 0),
         BackgroundColor3 = GOLD_BRIGHT,
         BorderSizePixel = 0,
         Visible = false,
@@ -1315,21 +1313,6 @@ function Library:Notify(config)
         t.Completed:Connect(function() notif:Destroy() end)
         t:Play()
     end)
-end
-
-function Library:Destroy()
-    if self._Connections then
-        for _, c in ipairs(self._Connections) do
-            if typeof(c) == "RBXScriptConnection" then
-                pcall(function() c:Disconnect() end)
-            end
-        end
-        self._Connections = {}
-    end
-    if self.ScreenGui then
-        self.ScreenGui:Destroy()
-        self.ScreenGui = nil
-    end
 end
 
 task.spawn(function()
