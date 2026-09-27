@@ -1,11 +1,12 @@
 local Library = {}
 Library.__index = Library
 
-local TweenService = game:GetService("TweenService")
-local RunService   = game:GetService("RunService")
-local Stats        = game:GetService("Stats")
-local Players      = game:GetService("Players")
-local UIS          = game:GetService("UserInputService")
+local HttpService   = game:GetService("HttpService")
+local TweenService  = game:GetService("TweenService")
+local RunService    = game:GetService("RunService")
+local Stats         = game:GetService("Stats")
+local Players       = game:GetService("Players")
+local UIS           = game:GetService("UserInputService")
 
 local GOLD_BRIGHT  = Color3.fromRGB(255, 215, 100)
 local GOLD_MID     = Color3.fromRGB(200, 160, 60)
@@ -36,6 +37,71 @@ local function new(class, props, parent)
     end
     if parent then inst.Parent = parent end
     return inst
+end
+
+local Icons = nil
+local function loadWithTimeout(url, timeout)
+    timeout = timeout or 5
+    local done = false
+    local result = nil
+    task.spawn(function()
+        local ok, res = pcall(game.HttpGet, game, url)
+        if ok and #res > 0 then
+            local execOk, execRes = pcall(function() return loadstring(res)() end)
+            if execOk then result = execRes end
+        end
+        done = true
+    end)
+    local start = tick()
+    while not done and (tick() - start) < timeout do
+        task.wait(0.05)
+    end
+    return result
+end
+
+Icons = loadWithTimeout("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua", 5)
+
+local function getIcon(name)
+    if not Icons then
+        return nil
+    end
+    name = string.match(string.lower(name), "^%s*(.*)%s*$")
+    local sizedicons = Icons["48px"]
+    local r = sizedicons[name]
+    if not r then return nil end
+    local rirs, riro = r[2], r[3]
+    return {
+        id = r[1],
+        imageRectSize = Vector2.new(rirs[1], rirs[2]),
+        imageRectOffset = Vector2.new(riro[1], riro[2]),
+    }
+end
+
+local function getAssetUri(id)
+    if type(id) == "number" then
+        return "rbxassetid://" .. id
+    end
+    return ""
+end
+
+local function resolveIcon(icon)
+    if not icon or icon == 0 then
+        return "", nil, nil
+    end
+
+    if type(icon) == "string" then
+        local asset = getIcon(icon)
+        if asset then
+            return "rbxassetid://" .. asset.id, asset.imageRectOffset, asset.imageRectSize
+        end
+        return "", nil, nil
+    end
+
+    return getAssetUri(icon), nil, nil
+end
+
+function Library:Icon(name)
+    return getIcon(name)
 end
 
 local TabMethods = {}
@@ -199,7 +265,7 @@ function TabMethods:CreateSlider(config)
 
     local row = self:_row(name, 48)
 
-    local label = new("TextLabel", {
+    new("TextLabel", {
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 8, 0.5, -8),
@@ -388,7 +454,7 @@ function TabMethods:CreateDropdown(config)
     })
     new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
 
-    local stroke = new("UIStroke", {
+    new("UIStroke", {
         Color = GOLD_MID,
         Thickness = 1,
         Transparency = 0.4,
@@ -408,7 +474,7 @@ function TabMethods:CreateDropdown(config)
         Parent = button,
     })
 
-    local arrow = new("ImageLabel", {
+    new("ImageLabel", {
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -8, 0.5, 0),
@@ -549,7 +615,7 @@ function TabMethods:CreateColorPicker(config)
     new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
     new("UIStroke", { Color = GOLD_MID, Thickness = 1, Transparency = 0.3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, button)
 
-    local label = new("TextLabel", {
+    new("TextLabel", {
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 10, 0.5, 0),
@@ -585,7 +651,6 @@ function TabMethods:CreateColorPicker(config)
         })
         new("UICorner", { CornerRadius = UDim.new(0, 6) }, preview)
 
-        local sliders = {}
         for i, ch in ipairs({"R", "G", "B"}) do
             local sRow = new("Frame", {
                 Position = UDim2.new(0, 10, 0, 60 + (i - 1) * 32),
@@ -593,7 +658,7 @@ function TabMethods:CreateColorPicker(config)
                 BackgroundTransparency = 1,
                 Parent = picker,
             })
-            local sLabel = new("TextLabel", {
+            new("TextLabel", {
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 20, 1, 0),
                 FontFace = FONT_BOLD,
@@ -627,7 +692,6 @@ function TabMethods:CreateColorPicker(config)
                 Position = UDim2.new(0, -5, 0.5, -12),
                 Parent = sRow,
             })
-            sliders[ch] = { hit = hit, track = sTrack }
 
             hit.MouseButton1Down:Connect(function()
                 local rel = math.clamp((UIS:GetMouseLocation().X - sTrack.AbsolutePosition.X) / sTrack.AbsoluteSize.X, 0, 1)
@@ -679,7 +743,7 @@ function TabMethods:CreateKeybind(config)
 
     local row = self:_row(name, 40)
 
-    local label = new("TextLabel", {
+    new("TextLabel", {
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 8, 0.5, 0),
@@ -716,8 +780,7 @@ function TabMethods:CreateKeybind(config)
         button.Text = "..."
     end)
 
-    local connection
-    connection = UIS.InputBegan:Connect(function(input, gpe)
+    UIS.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if listening and input.UserInputType == Enum.UserInputType.Keyboard then
             key = input.KeyCode.Name
@@ -778,6 +841,8 @@ function Library:CreateWindow(config)
         IgnoreGuiInset = true,
         Parent = Players.LocalPlayer:WaitForChild("PlayerGui"),
     })
+
+    Library._ScreenGui = self.ScreenGui
 
     self.SmartBar = new("Frame", {
         ZIndex = 150,
@@ -1080,16 +1145,19 @@ function Library:CreateTab(name, imageId)
         },
     }, Tab)
 
+    local img, rectOffset, rectSize = resolveIcon(imageId)
     local Icon = new("ImageButton", {
         AutoButtonColor = false,
         BackgroundTransparency = 1,
         ImageColor3 = ICON_IDLE,
         ZIndex = 151,
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Image = imageId,
+        Image = img,
         Size = UDim2.new(0, 22, 0, 22),
         Position = UDim2.new(0, ICON_SIZE / 2, 0.5, 0),
     }, Tab)
+    if rectOffset then Icon.ImageRectOffset = rectOffset end
+    if rectSize then Icon.ImageRectSize = rectSize end
 
     local Label = new("TextLabel", {
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -1246,5 +1314,68 @@ function Library:Notify(config)
         t:Play()
     end)
 end
+
+task.spawn(function()
+    task.wait(0.5)
+    local sg = Library._ScreenGui
+    if not sg then return end
+
+    local notif = new("Frame", {
+        ZIndex = 9500,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -20, 0, 20),
+        Size = UDim2.new(0, 280, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(21, 21, 23),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = sg,
+    })
+    new("UICorner", { CornerRadius = UDim.new(0, 10) }, notif)
+    new("UIStroke", {
+        Transparency = 0.5,
+        Thickness = 1,
+        Color = GOLD_MID,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, notif)
+    new("UIShadow", {}, notif)
+
+    new("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 8),
+        Size = UDim2.new(1, -24, 0, 18),
+        FontFace = FONT_BOLD,
+        TextSize = 14,
+        TextColor3 = GOLD_BRIGHT,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "Reiihub",
+        Parent = notif,
+    })
+    new("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 28),
+        Size = UDim2.new(1, -24, 0, 32),
+        FontFace = FONT,
+        TextSize = 12,
+        TextColor3 = Color3.fromRGB(230, 220, 200),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        Text = "Made by 5xnq",
+        Parent = notif,
+    })
+
+    TweenService:Create(notif,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        { Size = UDim2.new(0, 280, 0, 70) }
+    ):Play()
+
+    task.delay(6.5, function()
+        local t = TweenService:Create(notif,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            { Size = UDim2.new(0, 280, 0, 0), BackgroundTransparency = 1 }
+        )
+        t.Completed:Connect(function() notif:Destroy() end)
+        t:Play()
+    end)
+end)
 
 return Library
