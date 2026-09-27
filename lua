@@ -26,6 +26,8 @@ local BAR_HIDDEN_Y  = 90
 local CHEV_OPEN_Y   = -100
 local CHEV_CLOSED_Y = -14
 
+local PAGE_OPEN_HEIGHT = 280
+
 local function new(class, props, parent)
     local inst = Instance.new(class)
     for k, v in pairs(props or {}) do
@@ -35,13 +37,210 @@ local function new(class, props, parent)
     return inst
 end
 
+local TabMethods = {}
+TabMethods.__index = TabMethods
+
+function TabMethods:CreateToggle(config)
+    config = config or {}
+    local name = config.Name or "Toggle"
+    local default = config.Default or false
+    local callback = config.Callback
+
+    local row = new("Frame", {
+        Name = "row_" .. name,
+        LayoutOrder = #self.Toggles + 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = self.PageContent,
+    })
+
+    local label = new("TextLabel", {
+        Name = "RowLabel",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 8, 0.5, 0),
+        Size = UDim2.new(1, -70, 1, 0),
+        FontFace = FONT,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(230, 220, 200),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = name,
+        Parent = row,
+    })
+
+    local switch = new("Frame", {
+        Name = "Switch",
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.new(0, 40, 0, 22),
+        BackgroundColor3 = Color3.fromRGB(35, 28, 12),
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Parent = row,
+    })
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, switch)
+
+    local switchStroke = new("UIStroke", {
+        Color = GOLD_MID,
+        Thickness = 1,
+        Transparency = 0.4,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, switch)
+
+    local knob = new("Frame", {
+        Name = "Knob",
+        AnchorPoint = Vector2.new(0, 0.5),
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(0, 3, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(200, 190, 175),
+        BorderSizePixel = 0,
+        Parent = switch,
+    })
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
+
+    local hit = new("TextButton", {
+        Name = "Hit",
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 10,
+        Parent = row,
+    })
+
+    local state = default
+    local function applyState(animate)
+        local info = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        TweenService:Create(knob, info, {
+            Position = UDim2.new(0, state and 21 or 3, 0.5, 0),
+            BackgroundColor3 = state and Color3.fromRGB(255, 235, 170) or Color3.fromRGB(200, 190, 175),
+        }):Play()
+        TweenService:Create(switch, info, {
+            BackgroundColor3 = state and Color3.fromRGB(90, 70, 25) or Color3.fromRGB(35, 28, 12),
+        }):Play()
+        TweenService:Create(switchStroke, info, {
+            Transparency = state and 0.15 or 0.4,
+        }):Play()
+    end
+
+    applyState(false)
+
+    hit.MouseButton1Click:Connect(function()
+        state = not state
+        applyState(true)
+        if callback then callback(state) end
+    end)
+
+    hit.MouseEnter:Connect(function()
+        TweenService:Create(label, TweenInfo.new(0.15), { TextColor3 = Color3.fromRGB(255, 235, 170) }):Play()
+    end)
+    hit.MouseLeave:Connect(function()
+        TweenService:Create(label, TweenInfo.new(0.15), { TextColor3 = Color3.fromRGB(230, 220, 200) }):Play()
+    end)
+
+    local toggleObj = {
+        Name = name,
+        Set = function(v) state = v; applyState(true); if callback then callback(state) end end,
+        Get = function() return state end,
+    }
+
+    table.insert(self.Toggles, toggleObj)
+    return toggleObj
+end
+
+function TabMethods:CreateButton(config)
+    config = config or {}
+    local name = config.Name or "Button"
+    local callback = config.Callback
+
+    local row = new("Frame", {
+        Name = "row_" .. name,
+        LayoutOrder = #self.Buttons + 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = self.PageContent,
+    })
+
+    local button = new("TextButton", {
+        Name = "Button",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, -8, 0, 28),
+        BackgroundColor3 = Color3.fromRGB(35, 28, 12),
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Text = name,
+        FontFace = FONT_BOLD,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(255, 235, 170),
+        AutoButtonColor = false,
+        Parent = row,
+    })
+
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
+
+    local buttonStroke = new("UIStroke", {
+        Color = GOLD_MID,
+        Thickness = 1,
+        Transparency = 0.4,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, button)
+
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.15), {
+            BackgroundColor3 = Color3.fromRGB(90, 70, 25),
+        }):Play()
+        TweenService:Create(buttonStroke, TweenInfo.new(0.15), { Transparency = 0.15 }):Play()
+    end)
+
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.15), {
+            BackgroundColor3 = Color3.fromRGB(35, 28, 12),
+        }):Play()
+        TweenService:Create(buttonStroke, TweenInfo.new(0.15), { Transparency = 0.4 }):Play()
+    end)
+
+    button.MouseButton1Click:Connect(function()
+        if callback then callback() end
+    end)
+
+    local buttonObj = { Name = name }
+    table.insert(self.Buttons, buttonObj)
+    return buttonObj
+end
+
+function TabMethods:CreateLabel(config)
+    config = config or {}
+    local text = config.Name or "Label"
+
+    local label = new("TextLabel", {
+        Name = "Label_" .. text,
+        LayoutOrder = #self.Labels + 1,
+        Size = UDim2.new(1, -16, 0, 22),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        FontFace = FONT,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(230, 220, 200),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = text,
+        Parent = self.PageContent,
+    })
+
+    local labelObj = { Name = text, Frame = label }
+    table.insert(self.Labels, labelObj)
+    return labelObj
+end
+
 function Library:CreateWindow(config)
     config = config or {}
     local title = config.Title or "Reiihub"
 
     local self = setmetatable({}, Library)
     self.Tabs = {}
-    self.SettingsToggles = {}
 
     self.ScreenGui = new("ScreenGui", {
         Name = "Reiihub - UI",
@@ -207,7 +406,7 @@ function Library:CreateWindow(config)
         ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 160, 60)),
     })
     makeDivider(2)
-    self.WatermarkSubLabel = makeText("discord.gg/gay", 3, FONT, Color3.fromRGB(244, 242, 237))
+    makeText("discord.gg/gay", 3, FONT, Color3.fromRGB(244, 242, 237))
     makeDivider(4)
     self.FpsLabel = makeText("FPS: --", 5, FONT, Color3.fromRGB(204, 183, 148))
     makeDivider(6)
@@ -241,8 +440,8 @@ function Library:CreateWindow(config)
         end
     end)
 
-    self.SettingsPanel = new("Frame", {
-        Name = "SettingsPanel",
+    self.Page = new("Frame", {
+        Name = "Page",
         ZIndex = 145,
         AnchorPoint = Vector2.new(0.5, 1),
         Size = UDim2.new(0, 290, 0, 0),
@@ -253,29 +452,35 @@ function Library:CreateWindow(config)
         Visible = false,
     }, self.SmartBar)
 
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, self.SettingsPanel)
+    new("UICorner", { CornerRadius = UDim.new(0, 12) }, self.Page)
     new("UIStroke", {
         Transparency = 0.55,
         Thickness = 1,
         Color = Color3.fromRGB(230, 190, 80),
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, self.SettingsPanel)
+    }, self.Page)
+
+    local pageScroll = new("ScrollingFrame", {
+        Name = "PageScroll",
+        ZIndex = 146,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -16, 1, -16),
+        Position = UDim2.new(0, 8, 0, 8),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(121, 121, 121),
+    }, self.Page)
 
     new("UIListLayout", {
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 4),
+        Padding = UDim.new(0, 6),
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
-    }, self.SettingsPanel)
+    }, pageScroll)
 
-    new("UIPadding", {
-        PaddingTop    = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft   = UDim.new(0, 8),
-        PaddingRight  = UDim.new(0, 8),
-    }, self.SettingsPanel)
-
-    self.SettingsOpen = false
-    self.MenuOpen = false
+    self.PageContent = pageScroll
+    self.PageOpen = false
 
     self.Chevron.MouseButton1Click:Connect(function()
         self:SetMenuOpen(not self.MenuOpen)
@@ -290,30 +495,27 @@ function Library:CreateWindow(config)
             { ImageColor3 = Color3.fromRGB(230, 190, 80) }):Play()
     end)
 
-    self:CreateTab("Settings", "rbxassetid://80758916183665", function()
-        self:SetSettingsOpen(not self.SettingsOpen)
-    end)
-
+    self.MenuOpen = false
     return self
 end
 
-function Library:SetSettingsOpen(open)
-    self.SettingsOpen = open
+function Library:SetPageOpen(open)
+    self.PageOpen = open
     if open then
-        self.SettingsPanel.Visible = true
-        self.SettingsPanel.Size = UDim2.new(0, 290, 0, 0)
-        TweenService:Create(self.SettingsPanel,
+        self.Page.Visible = true
+        self.Page.Size = UDim2.new(0, 290, 0, 0)
+        TweenService:Create(self.Page,
             TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 290, 0, 132) }
+            { Size = UDim2.new(0, 290, 0, PAGE_OPEN_HEIGHT) }
         ):Play()
     else
-        local t = TweenService:Create(self.SettingsPanel,
+        local t = TweenService:Create(self.Page,
             TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
             { Size = UDim2.new(0, 290, 0, 0) }
         )
         t.Completed:Connect(function()
-            if not self.SettingsOpen then
-                self.SettingsPanel.Visible = false
+            if not self.PageOpen then
+                self.Page.Visible = false
             end
         end)
         t:Play()
@@ -323,8 +525,8 @@ end
 function Library:SetMenuOpen(open)
     self.MenuOpen = open
     if not open then
-        if self.SettingsOpen then
-            self:SetSettingsOpen(false)
+        if self.PageOpen then
+            self:SetPageOpen(false)
         end
         for _, tab in pairs(self.Tabs) do
             tab.Dot.Visible = false
@@ -344,7 +546,7 @@ function Library:SetMenuOpen(open)
         { Rotation = open and 0 or 180 }):Play()
 end
 
-function Library:CreateTab(name, imageId, onClick)
+function Library:CreateTab(name, imageId)
     local self_ = self
 
     local Wrapper = new("Frame", {
@@ -489,15 +691,8 @@ function Library:CreateTab(name, imageId, onClick)
 
     Interact.MouseEnter:Connect(onHover)
     Interact.MouseLeave:Connect(onLeave)
-    Interact.MouseButton1Click:Connect(function()
-        for _, entry in pairs(self_.Tabs) do
-            entry.Dot.Visible = false
-        end
-        Dot.Visible = true
-        if onClick then onClick() end
-    end)
 
-    local tabObject = {
+    local tabObject = setmetatable({
         Name = name,
         Frame = Tab,
         Wrapper = Wrapper,
@@ -505,206 +700,19 @@ function Library:CreateTab(name, imageId, onClick)
         Buttons = {},
         Toggles = {},
         Labels = {},
-    }
+        PageContent = self.PageContent,
+    }, TabMethods)
+
+    Interact.MouseButton1Click:Connect(function()
+        for _, entry in pairs(self_.Tabs) do
+            entry.Dot.Visible = false
+        end
+        Dot.Visible = true
+        self_:SetPageOpen(true)
+    end)
 
     self.Tabs[name] = tabObject
-
     return tabObject
-end
-
-function Library:CreateToggle(tab, config)
-    config = config or {}
-    local name = config.Name or "Toggle"
-    local default = config.Default or false
-    local callback = config.Callback
-
-    local row = new("Frame", {
-        Name = "row_" .. name,
-        LayoutOrder = #tab.Toggles + 1,
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = tab.Frame,
-    })
-
-    local label = new("TextLabel", {
-        Name = "RowLabel",
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 8, 0.5, 0),
-        Size = UDim2.new(1, -70, 1, 0),
-        FontFace = FONT,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(230, 220, 200),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = name,
-        Parent = row,
-    })
-
-    local switch = new("Frame", {
-        Name = "Switch",
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -8, 0.5, 0),
-        Size = UDim2.new(0, 40, 0, 22),
-        BackgroundColor3 = Color3.fromRGB(35, 28, 12),
-        BackgroundTransparency = 0.15,
-        BorderSizePixel = 0,
-        Parent = row,
-    })
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, switch)
-
-    local switchStroke = new("UIStroke", {
-        Color = GOLD_MID,
-        Thickness = 1,
-        Transparency = 0.4,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, switch)
-
-    local knob = new("Frame", {
-        Name = "Knob",
-        AnchorPoint = Vector2.new(0, 0.5),
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(0, 3, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(200, 190, 175),
-        BorderSizePixel = 0,
-        Parent = switch,
-    })
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-
-    local hit = new("TextButton", {
-        Name = "Hit",
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-        Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 10,
-        Parent = row,
-    })
-
-    local state = default
-    local function applyState(animate)
-        local info = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        TweenService:Create(knob, info, {
-            Position = UDim2.new(0, state and 21 or 3, 0.5, 0),
-            BackgroundColor3 = state and Color3.fromRGB(255, 235, 170) or Color3.fromRGB(200, 190, 175),
-        }):Play()
-        TweenService:Create(switch, info, {
-            BackgroundColor3 = state and Color3.fromRGB(90, 70, 25) or Color3.fromRGB(35, 28, 12),
-        }):Play()
-        TweenService:Create(switchStroke, info, {
-            Transparency = state and 0.15 or 0.4,
-        }):Play()
-    end
-
-    applyState(false)
-
-    hit.MouseButton1Click:Connect(function()
-        state = not state
-        applyState(true)
-        if callback then callback(state) end
-    end)
-
-    hit.MouseEnter:Connect(function()
-        TweenService:Create(label, TweenInfo.new(0.15), { TextColor3 = Color3.fromRGB(255, 235, 170) }):Play()
-    end)
-    hit.MouseLeave:Connect(function()
-        TweenService:Create(label, TweenInfo.new(0.15), { TextColor3 = Color3.fromRGB(230, 220, 200) }):Play()
-    end)
-
-    local toggleObj = {
-        Name = name,
-        Set = function(v) state = v; applyState(true); if callback then callback(state) end end,
-        Get = function() return state end,
-    }
-
-    table.insert(tab.Toggles, toggleObj)
-    return toggleObj
-end
-
-function Library:CreateButton(tab, config)
-    config = config or {}
-    local name = config.Name or "Button"
-    local callback = config.Callback
-
-    local row = new("Frame", {
-        Name = "row_" .. name,
-        LayoutOrder = #tab.Buttons + 1,
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = tab.Frame,
-    })
-
-    local button = new("TextButton", {
-        Name = "Button",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = UDim2.new(1, -8, 0, 28),
-        BackgroundColor3 = Color3.fromRGB(35, 28, 12),
-        BackgroundTransparency = 0.15,
-        BorderSizePixel = 0,
-        Text = name,
-        FontFace = FONT_BOLD,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(255, 235, 170),
-        AutoButtonColor = false,
-        Parent = row,
-    })
-
-    new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
-
-    local buttonStroke = new("UIStroke", {
-        Color = GOLD_MID,
-        Thickness = 1,
-        Transparency = 0.4,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, button)
-
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.15), {
-            BackgroundColor3 = Color3.fromRGB(90, 70, 25),
-        }):Play()
-        TweenService:Create(buttonStroke, TweenInfo.new(0.15), { Transparency = 0.15 }):Play()
-    end)
-
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.15), {
-            BackgroundColor3 = Color3.fromRGB(35, 28, 12),
-        }):Play()
-        TweenService:Create(buttonStroke, TweenInfo.new(0.15), { Transparency = 0.4 }):Play()
-    end)
-
-    button.MouseButton1Click:Connect(function()
-        if callback then callback() end
-    end)
-
-    local buttonObj = { Name = name }
-    table.insert(tab.Buttons, buttonObj)
-    return buttonObj
-end
-
-function Library:CreateLabel(tab, config)
-    config = config or {}
-    local text = config.Name or "Label"
-
-    local label = new("TextLabel", {
-        Name = "Label_" .. text,
-        LayoutOrder = #tab.Labels + 1,
-        Size = UDim2.new(1, -16, 0, 22),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        FontFace = FONT,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(230, 220, 200),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = text,
-        Parent = tab.Frame,
-    })
-
-    local labelObj = { Name = text, Frame = label }
-    table.insert(tab.Labels, labelObj)
-    return labelObj
 end
 
 return Library
