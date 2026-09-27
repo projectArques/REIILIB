@@ -925,9 +925,9 @@ function Library:CreateWindow(config)
         ZIndex = 9000,
         BorderSizePixel = 0,
         BackgroundColor3 = Color3.fromRGB(21, 21, 23),
-        AnchorPoint = Vector2.new(0, 0),
+        AnchorPoint = Vector2.new(1, 0),
         Size = UDim2.new(0, 340, 0, 34),
-        Position = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -20, 0, 20),
         Name = "Watermark",
         Parent = self.ScreenGui,
     })
