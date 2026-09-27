@@ -62,9 +62,7 @@ end
 Icons = loadWithTimeout("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua", 5)
 
 local function getIcon(name)
-    if not Icons then
-        return nil
-    end
+    if not Icons then return nil end
     name = string.match(string.lower(name), "^%s*(.*)%s*$")
     local sizedicons = Icons["48px"]
     local r = sizedicons[name]
@@ -85,10 +83,7 @@ local function getAssetUri(id)
 end
 
 local function resolveIcon(icon)
-    if not icon or icon == 0 then
-        return "", nil, nil
-    end
-
+    if not icon or icon == 0 then return "", nil, nil end
     if type(icon) == "string" then
         local asset = getIcon(icon)
         if asset then
@@ -96,7 +91,6 @@ local function resolveIcon(icon)
         end
         return "", nil, nil
     end
-
     return getAssetUri(icon), nil, nil
 end
 
@@ -114,7 +108,7 @@ function TabMethods:_row(name, height)
         Size = UDim2.new(1, 0, 0, height or 36),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Parent = self.PageContent,
+        Parent = self.Content,
     })
 end
 
@@ -820,7 +814,7 @@ function TabMethods:CreateLabel(text, imageId, color)
         TextColor3 = color or Color3.fromRGB(230, 220, 200),
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = text or "Label",
-        Parent = self.PageContent,
+        Parent = self.Content,
     })
     return { Frame = label, Set = function(t) label.Text = t end }
 end
@@ -833,6 +827,7 @@ function Library:CreateWindow(config)
     self.Tabs = {}
     self.MenuOpen = false
     self.PageOpen = false
+    self.ActiveTab = nil
 
     self.ScreenGui = new("ScreenGui", {
         Name = "Reiihub - UI",
@@ -1030,23 +1025,14 @@ function Library:CreateWindow(config)
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, self.Page)
 
-    self.PageContent = new("ScrollingFrame", {
-        Name = "PageScroll",
+    self.PageContainer = new("Frame", {
+        Name = "PageContainer",
         ZIndex = 146,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, -16, 1, -16),
         Position = UDim2.new(0, 8, 0, 8),
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(121, 121, 121),
     }, self.Page)
-    new("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 6),
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-    }, self.PageContent)
 
     self.Chevron.MouseButton1Click:Connect(function()
         self:SetMenuOpen(not self.MenuOpen)
@@ -1186,6 +1172,26 @@ function Library:CreateTab(name, imageId)
     })
     new("UICorner", { CornerRadius = UDim.new(1, 0) }, Dot)
 
+    local Content = new("ScrollingFrame", {
+        Name = name .. "Content",
+        ZIndex = 146,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(121, 121, 121),
+        Visible = false,
+        Parent = self.PageContainer,
+    })
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+    }, Content)
+
     local Interact = new("TextButton", {
         TextTransparency = 1,
         AutoButtonColor = false,
@@ -1237,12 +1243,16 @@ function Library:CreateTab(name, imageId)
         Wrapper = Wrapper,
         Dot = Dot,
         Rows = {},
-        PageContent = self.PageContent,
+        Content = Content,
     }, TabMethods)
 
     Interact.MouseButton1Click:Connect(function()
-        for _, entry in pairs(self_.Tabs) do entry.Dot.Visible = false end
+        for _, entry in pairs(self_.Tabs) do
+            entry.Dot.Visible = false
+            entry.Content.Visible = false
+        end
         Dot.Visible = true
+        Content.Visible = true
         self_:SetPageOpen(true)
         self_.ActiveTab = name
     end)
@@ -1260,56 +1270,69 @@ function Library:Notify(config)
     local notif = new("Frame", {
         ZIndex = 9500,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -20, 0, 20),
-        Size = UDim2.new(0, 280, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(21, 21, 23),
+        Position = UDim2.new(1, 300, 0, 20),
+        Size = UDim2.new(0, 300, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(16, 16, 18),
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = self.ScreenGui,
     })
-    new("UICorner", { CornerRadius = UDim.new(0, 10) }, notif)
-    new("UIStroke", {
-        Transparency = 0.5,
-        Thickness = 1,
-        Color = GOLD_MID,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, notif)
-    new("UIShadow", {}, notif)
+    new("UICorner", { CornerRadius = UDim.new(0, 4) }, notif)
 
-    new("TextLabel", {
+    local accent = new("Frame", {
+        Name = "Accent",
+        ZIndex = 9501,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(0, 3, 1, 0),
+        BackgroundColor3 = GOLD_BRIGHT,
+        BorderSizePixel = 0,
+        Parent = notif,
+    })
+
+    local titleLbl = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 8),
-        Size = UDim2.new(1, -24, 0, 18),
+        Position = UDim2.new(0, 14, 0, 10),
+        Size = UDim2.new(1, -30, 0, 16),
         FontFace = FONT_BOLD,
-        TextSize = 14,
-        TextColor3 = GOLD_BRIGHT,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(240, 240, 240),
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = title,
         Parent = notif,
     })
-    new("TextLabel", {
+
+    local contentLbl = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 28),
-        Size = UDim2.new(1, -24, 0, 32),
+        Position = UDim2.new(0, 14, 0, 28),
+        Size = UDim2.new(1, -30, 0, 16),
         FontFace = FONT,
         TextSize = 12,
-        TextColor3 = Color3.fromRGB(230, 220, 200),
+        TextColor3 = Color3.fromRGB(150, 150, 155),
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
         Text = content,
         Parent = notif,
     })
 
+    task.wait()
+
+    local titleH = math.max(titleLbl.TextBounds.Y, 16)
+    local contentH = math.max(contentLbl.TextBounds.Y, 16)
+    local totalH = titleH + contentH + 26
+
     TweenService:Create(notif,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.new(0, 280, 0, 70) }
+        TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        { Size = UDim2.new(0, 300, 0, totalH), Position = UDim2.new(1, -20, 0, 20) }
     ):Play()
 
     task.delay(duration, function()
         local t = TweenService:Create(notif,
-            TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 280, 0, 0), BackgroundTransparency = 1 }
+            TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+            { Position = UDim2.new(1, 320, 0, 20), BackgroundTransparency = 1 }
         )
+        TweenService:Create(accent, TweenInfo.new(0.28), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(titleLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
+        TweenService:Create(contentLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
         t.Completed:Connect(function() notif:Destroy() end)
         t:Play()
     end)
@@ -1323,56 +1346,69 @@ task.spawn(function()
     local notif = new("Frame", {
         ZIndex = 9500,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -20, 0, 20),
-        Size = UDim2.new(0, 280, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(21, 21, 23),
+        Position = UDim2.new(1, 300, 0, 20),
+        Size = UDim2.new(0, 300, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(16, 16, 18),
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = sg,
     })
-    new("UICorner", { CornerRadius = UDim.new(0, 10) }, notif)
-    new("UIStroke", {
-        Transparency = 0.5,
-        Thickness = 1,
-        Color = GOLD_MID,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, notif)
-    new("UIShadow", {}, notif)
+    new("UICorner", { CornerRadius = UDim.new(0, 4) }, notif)
 
-    new("TextLabel", {
+    local accent = new("Frame", {
+        Name = "Accent",
+        ZIndex = 9501,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(0, 3, 1, 0),
+        BackgroundColor3 = GOLD_BRIGHT,
+        BorderSizePixel = 0,
+        Parent = notif,
+    })
+
+    local titleLbl = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 8),
-        Size = UDim2.new(1, -24, 0, 18),
+        Position = UDim2.new(0, 14, 0, 10),
+        Size = UDim2.new(1, -30, 0, 16),
         FontFace = FONT_BOLD,
-        TextSize = 14,
-        TextColor3 = GOLD_BRIGHT,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(240, 240, 240),
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = "Reiihub",
         Parent = notif,
     })
-    new("TextLabel", {
+
+    local contentLbl = new("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 28),
-        Size = UDim2.new(1, -24, 0, 32),
+        Position = UDim2.new(0, 14, 0, 28),
+        Size = UDim2.new(1, -30, 0, 16),
         FontFace = FONT,
         TextSize = 12,
-        TextColor3 = Color3.fromRGB(230, 220, 200),
+        TextColor3 = Color3.fromRGB(150, 150, 155),
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
         Text = "Made by 5xnq",
         Parent = notif,
     })
 
+    task.wait()
+
+    local titleH = math.max(titleLbl.TextBounds.Y, 16)
+    local contentH = math.max(contentLbl.TextBounds.Y, 16)
+    local totalH = titleH + contentH + 26
+
     TweenService:Create(notif,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.new(0, 280, 0, 70) }
+        TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        { Size = UDim2.new(0, 300, 0, totalH), Position = UDim2.new(1, -20, 0, 20) }
     ):Play()
 
     task.delay(6.5, function()
         local t = TweenService:Create(notif,
-            TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 280, 0, 0), BackgroundTransparency = 1 }
+            TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+            { Position = UDim2.new(1, 320, 0, 20), BackgroundTransparency = 1 }
         )
+        TweenService:Create(accent, TweenInfo.new(0.28), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(titleLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
+        TweenService:Create(contentLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
         t.Completed:Connect(function() notif:Destroy() end)
         t:Play()
     end)
