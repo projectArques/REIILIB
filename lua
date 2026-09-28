@@ -432,6 +432,7 @@ function TabMethods:CreateDropdown(config)
     local multiple = config.MultipleOptions or false
     local selected = config.CurrentOption or (multiple and {} or {options[1]})
     local callback = config.Callback
+    local screenGui = self.Content:FindFirstAncestorWhichIsA("ScreenGui")
 
     local row = self:_row(name, 40)
     row.ClipsDescendants = false
@@ -486,9 +487,9 @@ function TabMethods:CreateDropdown(config)
     local list = new("ScrollingFrame", {
         Visible = false,
         ZIndex = 10000,
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 1, 2),
-        Size = UDim2.new(1, -8, 0, 0),
+        AnchorPoint = Vector2.new(0, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 250, 0, 0),
         BackgroundColor3 = Color3.fromRGB(21, 21, 23),
         BorderSizePixel = 0,
         ScrollBarThickness = 3,
@@ -496,7 +497,7 @@ function TabMethods:CreateDropdown(config)
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
-        Parent = row,
+        Parent = screenGui,
     })
     new("UICorner", { CornerRadius = UDim.new(0, 8) }, list)
     new("UIStroke", { Color = GOLD_MID, Thickness = 1, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, list)
@@ -505,25 +506,29 @@ function TabMethods:CreateDropdown(config)
 
     local open = false
 
+    local function updateListPosition()
+        list.Position = UDim2.new(0, button.AbsolutePosition.X, 0, button.AbsolutePosition.Y + button.AbsoluteSize.Y + 4)
+        list.Size = UDim2.new(0, button.AbsoluteSize.X, 0, list.Size.Y.Offset)
+    end
+
     local function setListOpen(v)
         open = v
         if v then
-            row.ZIndex = 9999
+            updateListPosition()
             list.Visible = true
-            list.Size = UDim2.new(1, -8, 0, 0)
+            list.Size = UDim2.new(0, button.AbsoluteSize.X, 0, 0)
             TweenService:Create(list,
                 TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-                { Size = UDim2.new(1, -8, 0, 120) }
+                { Size = UDim2.new(0, button.AbsoluteSize.X, 0, 120) }
             ):Play()
         else
             local t = TweenService:Create(list,
                 TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-                { Size = UDim2.new(1, -8, 0, 0) }
+                { Size = UDim2.new(0, button.AbsoluteSize.X, 0, 0) }
             )
             t.Completed:Connect(function()
                 if not open then
                     list.Visible = false
-                    row.ZIndex = 5
                 end
             end)
             t:Play()
@@ -583,6 +588,12 @@ function TabMethods:CreateDropdown(config)
 
     button.MouseButton1Click:Connect(function()
         setListOpen(not open)
+    end)
+
+    row.AncestryChanged:Connect(function()
+        if not row:IsDescendantOf(game) then
+            list:Destroy()
+        end
     end)
 
     return {
