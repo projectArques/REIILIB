@@ -108,6 +108,7 @@ function TabMethods:_row(name, height)
         Size = UDim2.new(1, 0, 0, height or 36),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
+        ClipsDescendants = false,
         Parent = self.Content,
     })
 end
@@ -434,6 +435,7 @@ function TabMethods:CreateDropdown(config)
 
     local row = self:_row(name, 40)
     row.ClipsDescendants = false
+    row.ZIndex = 5
 
     local button = new("TextButton", {
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -444,6 +446,7 @@ function TabMethods:CreateDropdown(config)
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
+        ZIndex = 6,
         Parent = row,
     })
     new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
@@ -465,6 +468,7 @@ function TabMethods:CreateDropdown(config)
         TextColor3 = Color3.fromRGB(255, 235, 170),
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = table.concat(selected, ", "),
+        ZIndex = 7,
         Parent = button,
     })
 
@@ -475,14 +479,15 @@ function TabMethods:CreateDropdown(config)
         Size = UDim2.new(0, 10, 0, 10),
         Image = "rbxassetid://138715549597115",
         ImageColor3 = GOLD_MID,
+        ZIndex = 7,
         Parent = button,
     })
 
     local list = new("ScrollingFrame", {
         Visible = false,
-        ZIndex = 300,
+        ZIndex = 10000,
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 20),
+        Position = UDim2.new(0.5, 0, 1, 2),
         Size = UDim2.new(1, -8, 0, 0),
         BackgroundColor3 = Color3.fromRGB(21, 21, 23),
         BorderSizePixel = 0,
@@ -490,6 +495,7 @@ function TabMethods:CreateDropdown(config)
         ScrollBarImageColor3 = Color3.fromRGB(121, 121, 121),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ClipsDescendants = true,
         Parent = row,
     })
     new("UICorner", { CornerRadius = UDim.new(0, 8) }, list)
@@ -502,6 +508,7 @@ function TabMethods:CreateDropdown(config)
     local function setListOpen(v)
         open = v
         if v then
+            row.ZIndex = 9999
             list.Visible = true
             list.Size = UDim2.new(1, -8, 0, 0)
             TweenService:Create(list,
@@ -514,7 +521,10 @@ function TabMethods:CreateDropdown(config)
                 { Size = UDim2.new(1, -8, 0, 0) }
             )
             t.Completed:Connect(function()
-                if not open then list.Visible = false end
+                if not open then
+                    list.Visible = false
+                    row.ZIndex = 5
+                end
             end)
             t:Play()
         end
@@ -538,6 +548,7 @@ function TabMethods:CreateDropdown(config)
                 TextColor3 = Color3.fromRGB(230, 220, 200),
                 TextXAlignment = Enum.TextXAlignment.Left,
                 AutoButtonColor = false,
+                ZIndex = 10001,
                 Parent = list,
             })
             new("UIPadding", { PaddingLeft = UDim.new(0, 8) }, optBtn)
@@ -625,7 +636,7 @@ function TabMethods:CreateColorPicker(config)
 
     local function openPicker()
         local picker = new("Frame", {
-            ZIndex = 300,
+            ZIndex = 10000,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.new(0, 240, 0, 200),
@@ -684,6 +695,7 @@ function TabMethods:CreateColorPicker(config)
                 AutoButtonColor = false,
                 Size = UDim2.new(1, 10, 0, 24),
                 Position = UDim2.new(0, -5, 0.5, -12),
+                ZIndex = 10001,
                 Parent = sRow,
             })
 
@@ -710,6 +722,7 @@ function TabMethods:CreateColorPicker(config)
             TextSize = 12,
             TextColor3 = Color3.fromRGB(21, 19, 17),
             AutoButtonColor = false,
+            ZIndex = 10001,
             Parent = picker,
         })
         new("UICorner", { CornerRadius = UDim.new(0, 6) }, close)
@@ -1032,6 +1045,7 @@ function Library:CreateWindow(config)
         BackgroundTransparency = 1,
         Size = UDim2.new(1, -16, 1, -16),
         Position = UDim2.new(0, 8, 0, 8),
+        ClipsDescendants = false,
     }, self.Page)
 
     self.Chevron.MouseButton1Click:Connect(function()
@@ -1184,6 +1198,7 @@ function Library:CreateTab(name, imageId)
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(121, 121, 121),
         Visible = false,
+        ClipsDescendants = false,
         Parent = self.PageContainer,
     })
     new("UIListLayout", {
@@ -1337,81 +1352,5 @@ function Library:Notify(config)
         t:Play()
     end)
 end
-
-task.spawn(function()
-    task.wait(0.5)
-    local sg = Library._ScreenGui
-    if not sg then return end
-
-    local notif = new("Frame", {
-        ZIndex = 9500,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 300, 0, 20),
-        Size = UDim2.new(0, 300, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Parent = sg,
-    })
-    new("UICorner", { CornerRadius = UDim.new(0, 4) }, notif)
-
-    local accent = new("Frame", {
-        Name = "Accent",
-        ZIndex = 9501,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 0, 0, 0),
-        Size = UDim2.new(0, 3, 1, 0),
-        BackgroundColor3 = GOLD_BRIGHT,
-        BorderSizePixel = 0,
-        Parent = notif,
-    })
-
-    local titleLbl = new("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 10),
-        Size = UDim2.new(1, -30, 0, 16),
-        FontFace = FONT_BOLD,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(240, 240, 240),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = "Reiihub",
-        Parent = notif,
-    })
-
-    local contentLbl = new("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 28),
-        Size = UDim2.new(1, -30, 0, 16),
-        FontFace = FONT,
-        TextSize = 12,
-        TextColor3 = Color3.fromRGB(150, 150, 155),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = "Made by 5xnq",
-        Parent = notif,
-    })
-
-    task.wait()
-
-    local titleH = math.max(titleLbl.TextBounds.Y, 16)
-    local contentH = math.max(contentLbl.TextBounds.Y, 16)
-    local totalH = titleH + contentH + 26
-
-    TweenService:Create(notif,
-        TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-        { Size = UDim2.new(0, 300, 0, totalH), Position = UDim2.new(1, -20, 0, 20) }
-    ):Play()
-
-    task.delay(6.5, function()
-        local t = TweenService:Create(notif,
-            TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
-            { Position = UDim2.new(1, 320, 0, 20), BackgroundTransparency = 1 }
-        )
-        TweenService:Create(accent, TweenInfo.new(0.28), { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(titleLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
-        TweenService:Create(contentLbl, TweenInfo.new(0.28), { TextTransparency = 1 }):Play()
-        t.Completed:Connect(function() notif:Destroy() end)
-        t:Play()
-    end)
-end)
 
 return Library
